@@ -3,38 +3,44 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 
-// OLED display width and height
+
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
 
-#define I2C_ADDRESS    0x57  // MAX30102 default I2C address
+#define I2C_ADDRESS    0x57 
 
 DFRobot_BloodOxygen_S_I2C MAX30102(&Wire, I2C_ADDRESS);
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
+
+
+int lastValidSPO2 = 0;
+int lastValidBPM = 0;
+float lastValidTemp = 0;
 
 void setup() {
   Serial.begin(115200);
   delay(1000);
   
-  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { // 0x3C is the I2C address
+  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { 
     Serial.println(F("SSD1306 not found"));
-    for (;;); // Halt execution
+    for (;;); 
   }
 
-  // Enable Internal Pull-ups (though external ones are recommended)
-  pinMode(21, INPUT_PULLUP);
-  pinMode(22, INPUT_PULLUP);
+  Wire.begin(21, 22); 
+  Wire.begin();  
 
-  Wire.begin();  // Initialize I2C for Arduino Nano (A4/A5)
-
-  // Clear the buffer
   display.clearDisplay();
 
-  // Set text properties
-  display.setTextSize(1);      // Text size (1 = small, 2 = medium, etc.)
-  display.setTextColor(SSD1306_WHITE); // White text
+  display.setTextSize(1);   
+  display.setTextColor(SSD1306_WHITE);
 
-  MAX30102.sensorStartCollect(); //start measuring
+  if (!MAX30102.begin()) {
+    Serial.println("MAX30102 init failed!");
+    while (1);
+  }
+
+
+  MAX30102.sensorStartCollect(); 
 }
 
 void loop() {
@@ -44,29 +50,54 @@ void loop() {
 
   MAX30102.getHeartbeatSPO2();
 
-  display.clearDisplay();
+  int spo2 = MAX30102._sHeartbeatSPO2.SPO2;
+  int bpm = MAX30102._sHeartbeatSPO2.Heartbeat;
+  float temp = MAX30102.getTemperature_C();
 
-  display.setCursor(10, 0);   // Set cursor position
-  display.print("SPO2: ");
-  display.print(MAX30102._sHeartbeatSPO2.SPO2);
-  display.println("%");
+  if (spo2 != -1){
+    lastValidSPO2 = spo2;
+  }
+  if (bpm != -1){
+    lastValidBPM = bpm;
+  } 
+  if (temp != -1) {
+    lastValidTemp = temp;
+  }
 
-  display.setCursor(10, 10);   // Set cursor position
-  display.print("Heart Rate: ");
-  display.print(MAX30102._sHeartbeatSPO2.Heartbeat);
-  display.println(" bpm");
+  if ((lastValidSPO2 > 0) && (lastValidBPM > 0) && (lastValidTemp > 0)){
+    display.clearDisplay();
 
-  display.setCursor(10, 20);   // Set cursor position
-  display.print("Board Temperature: ");
-  display.print(MAX30102.getTemperature_C());
-  display.println(" C");
+    display.setCursor(10, 0);   
+    display.print("SPO2: ");
+    display.print(lastValidSPO2);
+    display.println("%");
 
-  display.setCursor(10, 45);   // Set cursor position
-  display.print("Ambient Temperature: ");
-  display.print(temperature);
-  display.println(" C");
+    display.setCursor(10, 10);   
+    display.print("Heart Rate: ");
+    display.print(lastValidBPM);
+    display.println(" bpm");
 
-  display.display();
+    display.setCursor(10, 20); 
+    display.print("Board Temp: ");
+    display.print(lastValidTemp);
+    display.println(" C");
 
-  delay(5000);  // Sensor updates every 4 seconds
+    display.setCursor(10, 45);   
+    display.print("Ambient Temp: ");
+    display.print(temperature);
+    display.println(" C");
+
+    display.display();
+
+    delay(5000);
+  }
+  else{
+    display.clearDisplay();
+
+    display.setCursor(10, 0); 
+    display.println("Initializing...");
+    delay(5000);
+
+    display.display();
+  }
 }
