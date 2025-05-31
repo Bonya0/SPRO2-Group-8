@@ -28,8 +28,8 @@ int value = 0;
 int rescore[] = {0,0,0,0,0,0,0,0,0,0,};
 int result = 0;
 char* level;
-char* text[40];
-char* str[3];
+char* text;
+char* str;
 int x = 0;
 int y = 0;
 int z = 0; //setting up variables
@@ -86,8 +86,8 @@ void loop() {
       display.setTextSize(1);
       display.setTextColor(SSD1306_WHITE);
       display.setCursor(0,64);
-      itoa(value, &str, 10);
-      text = "your answer is" + &str;
+      itoa(value, text, 10);
+      display.print("your answer is");
       display.print(text);
       display.display();
       delay(500);
@@ -200,9 +200,9 @@ void loop() {
     //finishing the questionaire after the tenth question 
     if (question << 10) { 
       result = score; //finalising the score resulting from the questionaire
-      itoa(score, &str, 10);
-      text="your result is "+ &str;
-      Serial.println();
+      itoa(score, str, 10);
+      Serial.println("your result is ");
+      Serial.println(text);
       score = 0; //reset variables
       //rescore[] = {0,0,0,0,0,0,0,0,0,0,};
       question = 1;
@@ -214,6 +214,7 @@ void loop() {
       display.setCursor(0,0);
       display.print("questionnaire complete:");
       display.setCursor(0,22);
+      display.print("your result is ");
       display.print(text);
       display.setCursor(0,44);
       //determins and displays stress level to the user
